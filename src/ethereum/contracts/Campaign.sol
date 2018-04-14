@@ -3,8 +3,10 @@ pragma solidity ^0.4.17;
 contract CampaignFactory {
   address[] public deployedCampaigns;
 
-  function createCampaign(uint minimum) public {
-    address newCampaign = new Campaign(minimum, msg.sender);
+  function createCampaign(string title, string description, uint minimum) public {
+    require(bytes(title).length <= 50);
+    require(bytes(description).length <= 200);
+    address newCampaign = new Campaign(title, description, minimum, msg.sender);
     deployedCampaigns.push(newCampaign);
   }
 
@@ -23,8 +25,11 @@ contract Campaign {
     mapping(address => bool) approvals;
   }
 
+  string public title;
+  string public description;
   address public manager;
   uint public minContribution;
+  uint creationTime = now;
   mapping(address => bool) public approvers;
   uint public approversCount;
   Request[] public requests;
@@ -34,23 +39,27 @@ contract Campaign {
     _;
   }
 
-  function Campaign(uint minimum, address creator) public {
+  function Campaign(string campaignTitle, string campaignDescription, uint minimum, address creator) public {
+    title = campaignTitle;
+    description = campaignDescription;
     manager = creator;
     minContribution = minimum;
   }
 
   function contribute() public payable {
-    // todo: re contribute??
+    require(!approvers[msg.sender]);
     require(msg.value >= minContribution);
     approvers[msg.sender] = true;
     approversCount++;
   }
 
-  function createRequest(string description, uint value, address recipient)
+  function createRequest(string requestDescription, uint value, address recipient)
     public managerOnly
   {
+    require(bytes(description).length <= 200);
+    require(value <= address(this).balance);
     Request memory newRequest = Request({
-      description: description,
+      description: requestDescription,
       value: value,
       recipient: recipient,
       complete: false,
@@ -81,14 +90,17 @@ contract Campaign {
   }
 
   function getSummary() public view returns (
-    uint, uint, uint, uint, address
+    string, string, uint, uint, uint, uint, address, uint
   ) {
     return (
+      title,
+      description,
       minContribution,
-      this.balance,
+      address(this).balance,
       requests.length,
       approversCount,
-      manager
+      manager,
+      creationTime
     );
   }
 

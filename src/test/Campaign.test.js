@@ -16,11 +16,11 @@ beforeEach(async () => {
 
   factory = await new web3.eth.Contract(JSON.parse(compiledFactory.interface))
     .deploy({ data: compiledFactory.bytecode })
-    .send({ from: accounts[1], gas: '1000000' });
+    .send({ from: accounts[1], gas: '3000000' });
 
-  await factory.methods.createCampaign('100').send({
+  await factory.methods.createCampaign('Some campaign', 'Some description', '100').send({
     from: accounts[0],
-    gas: '1000000'
+    gas: '3000000'
   });
 
   [campaignAddress] = await factory.methods.getDeployedCampaigns().call();
@@ -71,6 +71,11 @@ describe('Campaigns', () => {
   });
 
   it('allows a manager to make a payment request', async () => {
+    await campaign.methods.contribute().send({
+      from: accounts[2],
+      value: '100000'
+    });
+
     await campaign.methods
       .createRequest('a testing request', '1000', accounts[3])
       .send({
@@ -81,6 +86,20 @@ describe('Campaigns', () => {
     const request = await campaign.methods.requests(0).call();
     assert.ok(request);
     assert.equal(request.description, 'a testing request');
+  });
+
+  it('requires request payment value less than Campaign balance', async () => {
+    try {
+      await campaign.methods
+        .createRequest('a request', '1000', accounts[3])
+        .send({
+          from: accounts[0],
+          gas: '1000000'
+        });
+      assert(false);
+    } catch (err) {
+      assert(err);
+    }
   });
 
   it('processes requests', async () => {
@@ -111,6 +130,44 @@ describe('Campaigns', () => {
     const afterBalance = parseInt(await web3.eth.getBalance(accounts[3]), 10);
     const diff = afterBalance - initBalance;
     assert(diff > parseInt(web3.utils.toWei('1.9', 'ether')), 10);
+  });
+
+  it('rejects re-contribution', async () => {
+    await campaign.methods.contribute().send({
+      from: accounts[1],
+      value: web3.utils.toWei('3', 'ether')
+    });
+
+    try {
+      await campaign.methods.contribute().send({
+        from: accounts[1],
+        value: web3.utils.toWei('3', 'ether')
+      });
+      assert(false);
+    } catch (err) {
+      assert(err);
+    }
+  });
+
+  it('has a summary', async () => {
+    await campaign.methods.contribute().send({
+      from: accounts[1],
+      value: '1000'
+    });
+
+    await campaign.methods.createRequest('a request', '100', accounts[3]).send({
+      from: accounts[0],
+      gas: '3100000'
+    });
+
+    const summary = await campaign.methods.getSummary().call();
+    assert.ok(summary);
+  });
+
+  it('has a creation time', async () => {
+    const summary = await campaign.methods.getSummary().call();
+    const creationDate = new Date(summary[7] * 1000);
+    assert(creationDate - Date.now() < 0);
   });
 
 });
