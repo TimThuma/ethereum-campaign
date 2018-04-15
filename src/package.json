@@ -7,7 +7,6 @@
     "test": "mocha",
     "dev": "node server.js",
     "build": "next build",
-    "start": "NODE_ENV=production node server.js",
     "out": "next build && next export"
   },
   "author": "",
@@ -15,6 +14,7 @@
   "dependencies": {
     "fs-extra": "^5.0.0",
     "ganache-cli": "^6.1.0",
+    "jdenticon": "^2.0.0",
     "mocha": "^5.0.5",
     "next": "^5.1.0",
     "next-routes": "^1.4.1",
