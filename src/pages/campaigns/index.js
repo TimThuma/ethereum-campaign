@@ -4,43 +4,52 @@ import { Item, Button, Icon, Message, Loader } from 'semantic-ui-react';
 import Layout from '../../components/Layout';
 import Jdenticon from '../../components/Jdenticon';
 import { Link } from '../../routes';
+import getSummary from '../../utils/get-campaign-summary';
+import Campaign from '../../ethereum/campaign';
 
 class CampaignIndex extends Component {
   state = {
-    campaigns: []
+    campaignsInfo: []
   };
 
   async componentDidMount() {
-    const campaigns = await factory.methods.getDeployedCampaigns().call();
-    this.setState({ campaigns: campaigns });
+    const campaignAddresses = await factory.methods.getDeployedCampaigns().call();
+    const campaignsInfo = await Promise.all(
+      campaignAddresses.map(async (address) => {
+        const campaign = Campaign(address);
+        const summary = await getSummary(campaign);
+        return Object.assign(summary, { address: address });
+      })
+    );
+    this.setState({ campaignsInfo: campaignsInfo });
   }
 
   // Create a list of Cards
   renderCampaigns() {
 
-    if (this.state.campaigns.length === 0) {
+    if (this.state.campaignsInfo.length === 0) {
       return (
         <Message color="blue">
-          <p><Loader active inline style={{ marginRight: 10 }}/> Loading campaigns</p>
+          <div><Loader active inline style={{ marginRight: 10 }}/> Loading campaigns</div>
         </Message>
       );
     }
 
-    const items = this.state.campaigns.map(address => {
+    const items = this.state.campaignsInfo.map((info, index) => {
       return (
-        <Item>
+        <Item key={`campaign-${index}`}>
           <Item.Image>
-            <Jdenticon value={address} size={150} />
+            <Jdenticon value={info.address} size={150} />
           </Item.Image>
 
           <Item.Content>
-            <Item.Header>Campaign Title</Item.Header>
+            <Item.Header style={{ marginTop: '15px' }}>{info.title}</Item.Header>
             <Item.Meta>
-              <span>{address}</span>
+              <span>{info.address}</span>
             </Item.Meta>
-            <Item.Description>Description of the campaign.</Item.Description>
+            <Item.Description>{info.description}</Item.Description>
             <Item.Extra>
-              <Link route={`/campaigns/${address}`}>
+              <Link route={`/campaigns/${info.address}`}>
                 <a>
                   <Button primary floated='right'>
                     View Campaign
@@ -76,7 +85,7 @@ class CampaignIndex extends Component {
         </Link>
         {this.renderCampaigns()}
 
-        <Message hidden={this.state.campaigns.length === 0} info style={{ marginTop: 30, marginBottom:10 }}>
+        <Message hidden={this.state.campaignsInfo.length === 0} info style={{ marginTop: 30, marginBottom:10 }}>
           <p>* Identicon powered by <a href="https://jdenticon.com">Jdenticon</a>. Copyright (c) 2014-2018 Daniel Mester Pirttijärvi</p>
         </Message>
       </Layout>
