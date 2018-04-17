@@ -35,13 +35,24 @@ class CampaignIndex extends Component {
       );
     }
 
-    const items = this.state.campaignsInfo.map((info, index) => {
-      return (
-        <Item key={`campaign-${index}`}>
+    const timestampStyle = {
+      position: 'absolute',
+      right: '0px',
+      left: 'auto',
+      width: '200px',
+      marginTop: '15px',
+      textAlign: 'right'
+    };
+
+    // display the latest campaign first.
+    const items = [];
+    for (let i = this.state.campaignsInfo.length - 1; i >= 0; i--) {
+      const info = this.state.campaignsInfo[i];
+      items.push(
+        <Item key={`campaign-${i}`} style={{ position: 'relative' }}>
           <Item.Image>
             <Jdenticon value={info.address} size={150} />
           </Item.Image>
-
           <Item.Content>
             <Item.Header style={{ marginTop: '15px' }}>{info.title}</Item.Header>
             <Item.Meta>
@@ -58,10 +69,13 @@ class CampaignIndex extends Component {
                 </a>
               </Link>
             </Item.Extra>
+            <Item.Extra style={timestampStyle}>
+              {new Date(info.creationTime * 1000).toLocaleString()}
+            </Item.Extra>
           </Item.Content>
         </Item>
       );
-    });
+    }
     return (
       <Item.Group divided>
         {items}
